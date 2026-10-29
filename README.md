@@ -14,6 +14,7 @@ PGDip ICT (AI and Data Science), Cape Peninsula University of Technology. Superv
 ![pandas](https://img.shields.io/badge/pandas-3.1.0-150458?logo=pandas&logoColor=white)
 ![NumPy](https://img.shields.io/badge/NumPy-2.4.6-013243?logo=numpy&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.66.1-FF4B4B?logo=streamlit&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![pytest](https://img.shields.io/badge/pytest-9.2.0-0A9EDC?logo=pytest&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI-2088FF?logo=githubactions&logoColor=white)
 ![Jupyter](https://img.shields.io/badge/Jupyter-Notebooks-F37626?logo=jupyter&logoColor=white)
@@ -26,7 +27,8 @@ PGDip ICT (AI and Data Science), Cape Peninsula University of Technology. Superv
 - **Failure prediction:** a Random Forest scores each machine's probability of failing (AI4I 2020 dataset) and turns it into a health score, a status (Critical / Warning / Normal) and a recommended action.
 - **Remaining useful life:** a second Random Forest estimates the cycles an engine has left (NASA C-MAPSS FD001).
 - **Data quality:** uploaded data is cleaned where safe (spacing, case, duplicates, text-as-number), and rows with missing or physically impossible values are rejected and reported. Missing values are never filled in, because a missing reading may mean a failed sensor.
-- **Dashboard:** Streamlit app with Overview, Machine detail, Alerts and Remaining-useful-life tabs, and CSV upload.
+- **History:** scored batches can be saved to a local SQLite database, so readings accumulate into the historical data a future retraining step would learn from.
+- **Dashboard:** Streamlit app with Overview, Machine detail, Alerts, History and Remaining-useful-life tabs, and CSV upload.
 
 ## Architecture
 | Component | File |
@@ -35,6 +37,7 @@ PGDip ICT (AI and Data Science), Cape Peninsula University of Technology. Superv
 | 2. ML models | `src/models.py` |
 | 3. Prediction engine | `src/prediction_engine.py` |
 | 4. Dashboard | `src/dashboard.py` |
+| Data layer: history store | `src/storage.py` |
 
 ```
 data/        datasets (AI4I 2020, C-MAPSS FD001) and small test files
@@ -55,13 +58,13 @@ pip install -r requirements.txt
 python -m streamlit run src/dashboard.py
 ```
 
-The dashboard opens at `http://localhost:8501`. Without an upload it uses the AI4I 2020 dataset. To try the data-quality checks, upload `data/test_broken.csv` or `data/test_messy.csv`.
+The dashboard opens at `http://localhost:8501`. Without an upload it uses the AI4I 2020 dataset. To try the data-quality checks, upload `data/test_broken.csv` or `data/test_messy.csv`. Use **Save this batch to history** in the sidebar to store a scored batch.
 
 ## Test it
 ```bash
 python -m pytest --cov=src --cov-report=term-missing
 ```
-57 automated tests: unit, integration, ML-specific (performance gate, behavioural, robustness, determinism, leakage, version) and system tests that run the dashboard headlessly. Coverage is 94%. The same tests run automatically on every push through GitHub Actions.
+66 automated tests: unit, integration, ML-specific (performance gate, behavioural, robustness, determinism, leakage, version) and system tests that run the dashboard headlessly. Coverage is 95%. The history store was built test-first. The same tests run automatically on every push through GitHub Actions, with a build failure if coverage drops below 90%.
 
 ## Results (held-out test set)
 | Model | Result |
@@ -76,7 +79,7 @@ python -m pytest --cov=src --cov-report=term-missing
 - The system is advisory. It recommends actions and never acts on equipment.
 
 ## Not included (future work)
-Persistent storage of incoming readings for retraining, a REST API, per-machine explanations (SHAP), and per-equipment-class models.
+Automatic retraining from the stored history, a REST API, per-machine explanations (SHAP), and per-equipment-class models.
 
 ## Data sources
 - Matzka, S. (2020) *AI4I 2020 Predictive Maintenance Dataset*. UCI Machine Learning Repository.
