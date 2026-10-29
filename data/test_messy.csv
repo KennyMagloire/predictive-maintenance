@@ -1,0 +1,6 @@
+Product ID,Type,Air temperature [K],Process temperature [K],Rotational speed [rpm],Torque [Nm],Tool wear [min]
+M001, m ,298.1,308.6,1551,42.8,0
+M001, m ,298.1,308.6,1551,42.8,0
+M002,l,298.9,309.1,1410,abc,191
+M003,X,300.2,310.1,1500,40.0,50
+M004,H,299.0,309.5,1400,55.0,120
