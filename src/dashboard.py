@@ -2,12 +2,13 @@
 dashboard.py — Design component 4: Maintenance Dashboard
 
 Presents predictions to maintenance engineers: fleet overview, machine detail,
-alert list and remaining-useful-life tracking.
+alert list, stored history and remaining-useful-life tracking.
 
 Run from the project root with:
     python -m streamlit run src/dashboard.py
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -22,9 +23,12 @@ import streamlit as st
 from src.data_pipeline import SENSORS, ENGINEERED, load_dataset, prepare
 from src.models import load_classifier, load_rul_model, predict_rul
 from src.prediction_engine import assess
+from src.storage import count_records, init_db, load_history, save_results
 
 DEFAULT_DATA = ROOT / "data" / "ai4i2020.csv"
 CMAPSS_DATA = ROOT / "data" / "train_FD001.txt"
+# The history database location can be overridden (the tests use a temporary one).
+HISTORY_DB = Path(os.environ.get("HISTORY_DB", ROOT / "data" / "history.db"))
 STATUS_ICON = {"Critical": "🔴 Critical", "Warning": "🟠 Warning", "Normal": "🟢 Normal"}
 CMAPSS_COLUMNS = (["engine", "cycle", "op1", "op2", "op3"]
                   + [f"s{i}" for i in range(1, 22)])
@@ -105,8 +109,15 @@ if table is None:
     st.write(problems)
     st.stop()
 
-tab_overview, tab_detail, tab_alerts, tab_rul = st.tabs(
-    ["Overview", "Machine detail", "Alerts", "Remaining useful life"])
+init_db(HISTORY_DB)
+with st.sidebar:
+    st.header("History")
+    if st.button("Save this batch to history"):
+        saved = save_results(HISTORY_DB, table)
+        st.success(f"Saved {saved:,} readings to the history.")
+
+tab_overview, tab_detail, tab_alerts, tab_history, tab_rul = st.tabs(
+    ["Overview", "Machine detail", "Alerts", "History", "Remaining useful life"])
 
 # ----- Overview -----
 with tab_overview:
@@ -181,6 +192,14 @@ with tab_alerts:
     st.dataframe(for_display(alerts))
     st.download_button("Download as CSV", alerts.to_csv(index=False),
                        file_name="alerts.csv", mime="text/csv")
+
+# ----- History -----
+with tab_history:
+    st.metric("Stored readings", f"{count_records(HISTORY_DB):,}")
+    st.caption("Each click of 'Save this batch to history' adds the scored batch "
+               "here. Stored readings become the historical data that a future "
+               "retraining step would learn from.")
+    st.dataframe(load_history(HISTORY_DB, limit=20))
 
 # ----- Remaining useful life -----
 with tab_rul:
